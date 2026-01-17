@@ -2,8 +2,8 @@ import warnings
 from typing import List, Literal, Annotated
 from pydantic import BaseModel, Field
 from langchain_google_genai import ChatGoogleGenerativeAI
-from modules.audio_extractor import transcribe_audio_simple
-from src.prompt import system_prompt
+from convoxai.utils.audio import transcribe_audio_simple
+from convoxai.core.prompts.templates import system_prompt
 from convoxai.config import GEMINI_API_KEY, GEMINI_MODEL_NAME, GEMINI_TEMPERATURE
 
 warnings.filterwarnings("ignore")
@@ -31,7 +31,3 @@ def generate_summary(audio_file_path: str | None = None) -> dict:
     final_prompt = system_prompt.format(transcript=transcript)
     response = st_llm.invoke(final_prompt)
     return response
-
-AUDIO_FILE_PATH = r"C:\Users\DHRUV AGARWAL\Desktop\Call-Summarizer\testing_audios\sample_testing.wav"
-
-print(generate_summary(AUDIO_FILE_PATH))

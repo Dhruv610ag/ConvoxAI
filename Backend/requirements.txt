@@ -1,4 +1,4 @@
-langchain==0.3.7
+langchain
 langchain-core
 langchain-community
 langchain-groq
@@ -6,12 +6,12 @@ langchain-pinecone
 langchain_google_genai
 python-dotenv
 streamlit
+pydantic
 sentence-transformers
 huggingface-hub
-openai-whisper
+faster-whisper
 pydub
 fastapi
 uvicorn[standard]
 pytest
-httpx
--e .
+python-multipart

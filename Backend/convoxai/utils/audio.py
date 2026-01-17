@@ -1,4 +1,4 @@
-import whisper
+from faster_whisper import WhisperModel
 from pydub import AudioSegment
 import warnings
 import os
@@ -10,7 +10,7 @@ _MODEL_CACHE = {}
 
 def get_whisper_model(model_size):
     if model_size not in _MODEL_CACHE:
-        _MODEL_CACHE[model_size] = whisper.load_model(model_size)
+        _MODEL_CACHE[model_size] = WhisperModel(model_size, device="cpu", compute_type="int8")
     return _MODEL_CACHE[model_size]
 
 def convert_to_wav(input_file_path, output_file_path):
@@ -29,8 +29,6 @@ def transcribe_audio_simple(audio_file_path, model_size=WHISPER_MODEL_SIZE):
             convert_to_wav(audio_file_path, wav_file_path)
         audio_file_path = wav_file_path
     model = get_whisper_model(model_size)
-    result = model.transcribe(audio_file_path)
-    return result["text"]
-
-
-    
+    segments, info = model.transcribe(audio_file_path)
+    text = " ".join([segment.text for segment in segments])
+    return text

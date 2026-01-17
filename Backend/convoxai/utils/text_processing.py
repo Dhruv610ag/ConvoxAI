@@ -1,4 +1,5 @@
-from modules.audio_extractor import transcribe_audio_simple
+from convoxai.utils.audio import transcribe_audio_simple
+
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from convoxai.config import CHUNK_SIZE, CHUNK_OVERLAP, TEXT_SEPARATORS
 
