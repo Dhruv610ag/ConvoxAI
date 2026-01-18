@@ -32,3 +32,4 @@ def transcribe_audio_simple(audio_file_path, model_size=WHISPER_MODEL_SIZE):
     segments, info = model.transcribe(audio_file_path)
     text = " ".join([segment.text for segment in segments])
     return text
+
