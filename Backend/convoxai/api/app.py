@@ -126,23 +126,6 @@ async def summarize_audio(
                 detail=f"Invalid file format. Supported formats: {', '.join(allowed_extensions)}"
             )
         )
-    max_file_size = 50 * 1024 * 1024  
-    audio_file.file.seek(0, 2)  
-    file_size = audio_file.file.tell()
-    audio_file.file.seek(0) 
-    if file_size > max_file_size:
-        raise HTTPException(
-            ErrorResponse(
-                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                detail=f"File size exceeds maximum limit of 50MB. Your file: {file_size / (1024*1024):.2f}MB"
-            )
-        )
-    if file_size == 0:
-        raise HTTPException(
-            ErrorResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Uploaded file is empty"
-        )
     tmp_file_path = None
     try:
         tmp_file_path = save_upload_file_tmp(audio_file)
@@ -167,34 +150,6 @@ async def summarize_audio(
             except Exception:
                 pass
 
-@app.post("/summarize-from-path", response_model=SummaryResponse, tags=["Summarization"])
-async def summarize_from_path(file_path: str):
-    if not os.path.exists(file_path):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"File not found: {file_path}"
-        )
-    allowed_extensions = {".wav", ".mp3", ".m4a", ".flac"}
-    file_extension = Path(file_path).suffix.lower()
-    if file_extension not in allowed_extensions:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid file format. Supported formats: {', '.join(allowed_extensions)}"
-        )
-    try:
-        summary_response = generate_summary(file_path)
-        return summary_response
-    except ValueError as ve:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(ve)
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to process audio file: {str(e)}"
-        )
-
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc):
     return JSONResponse(
@@ -213,10 +168,10 @@ async def general_exception_handler(request, exc):
 
 @app.on_event("startup")
 async def startup_event():
-    print("application Started")
+    print(" 🟢 Starting with the Application")
     pass
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    print("Application Shutdown")
+    print(" 🛑 Shutting down the Application")
     pass
