@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AnimatedThemeToggler } from "./ui/animated-theme-toggler"
-import { summarizeAudio } from "@/lib/api"
+import { summarizeAudio, uploadAudioFile, type AudioFileMetadata, type AudioFileUploadResponse } from "@/lib/api"
 import type { SummaryResponse } from "@/types/api"
 
 
@@ -19,6 +19,7 @@ export function Dashboard({ selectedCall, setSelectedCall }: DashboardProps) {
   const [error, setError] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isDragging, setIsDragging] = useState(false)
+  const [uploadedFileMetadata, setUploadedFileMetadata] = useState<AudioFileMetadata | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const allowedExtensions = ['.wav', '.mp3', '.m4a', '.flac', '.ogg']
@@ -70,6 +71,20 @@ export function Dashboard({ selectedCall, setSelectedCall }: DashboardProps) {
     setError(null)
 
     try {
+      // First, upload to storage
+      const uploadResponse = await uploadAudioFile(selectedFile)
+      
+      // Convert to metadata format for display
+      const metadata: AudioFileMetadata = {
+        id: uploadResponse.file_id,
+        filename: uploadResponse.filename,
+        storage_url: uploadResponse.storage_url,
+        file_size: selectedFile.size,
+        created_at: new Date().toISOString()
+      }
+      setUploadedFileMetadata(metadata)
+      
+      // Then, summarize the audio
       const response = await summarizeAudio(selectedFile)
       setSummaryData(response)
       setSelectedFile(null)
@@ -86,6 +101,13 @@ export function Dashboard({ selectedCall, setSelectedCall }: DashboardProps) {
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
+  }
+
+  const handleNewUpload = () => {
+    setSummaryData(null)
+    setUploadedFileMetadata(null)
+    setSelectedFile(null)
+    setError(null)
   }
 
   return (
@@ -262,8 +284,27 @@ export function Dashboard({ selectedCall, setSelectedCall }: DashboardProps) {
                     <p>{summaryData.summary}</p>
                   </CardContent>
                 </Card>
+                {uploadedFileMetadata && (
+                  <Card className="bg-card border-border">
+                    <CardHeader>
+                      <CardTitle className="text-base">Uploaded File</CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-sm space-y-2">
+                      <div className="flex items-center gap-2">
+                        <FileAudio className="w-4 h-4 text-primary" />
+                        <p className="font-medium text-foreground">{uploadedFileMetadata.filename}</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Size: {(uploadedFileMetadata.file_size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Uploaded: {new Date(uploadedFileMetadata.created_at).toLocaleString()}
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
                 <Button
-                  onClick={() => setSummaryData(null)}
+                  onClick={handleNewUpload}
                   variant="outline"
                   className="w-full"
                 >

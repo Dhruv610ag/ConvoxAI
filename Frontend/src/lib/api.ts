@@ -195,15 +195,22 @@ export async function deleteConversation(conversationId: string): Promise<void> 
 export interface AudioFileMetadata {
   id: string;
   filename: string;
-  storage_url: string;
+  storage_url?: string;
   file_size: number;
   created_at: string;
+}
+
+export interface AudioFileUploadResponse {
+  file_id: string;
+  filename: string;
+  storage_url: string;
+  message: string;
 }
 
 /**
  * Upload audio file to storage
  */
-export async function uploadAudioFile(file: File): Promise<AudioFileMetadata> {
+export async function uploadAudioFile(file: File): Promise<AudioFileUploadResponse> {
   try {
     const formData = new FormData();
     formData.append('audio_file', file);
