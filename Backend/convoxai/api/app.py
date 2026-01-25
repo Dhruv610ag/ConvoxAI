@@ -6,6 +6,7 @@ from convoxai.core.summarizer import generate_summary
 from convoxai.core.models import SummaryResponse
 from convoxai.config import GEMINI_MODEL_NAME, WHISPER_MODEL_SIZE,GROQ_MODEL_NAME
 from convoxai.core.summarizer import create_llm,create_llm_2
+from convoxai.api import auth, storage, chat_history
 import os
 import tempfile
 import shutil
@@ -14,11 +15,17 @@ from pathlib import Path
 # Initialize FastAPI app
 app = FastAPI(
     title="ConvoxAI - AI-Powered Call Summarization API",
-    description="An end-to-end AI-based Call Summarization system using RAG pipeline",
+    description="An end-to-end AI-based Call Summarization system using RAG pipeline with Supabase authentication",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+# Include routers
+app.include_router(auth.router)
+app.include_router(storage.router)
+app.include_router(chat_history.router)
+
 
 # Configure CORS
 app.add_middleware(

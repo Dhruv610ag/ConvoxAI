@@ -1,6 +1,8 @@
 import { Phone, MessageSquare, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { UserProfile } from "@/components/user-profile"
+
 
 interface SidebarProps {
   activeView: "dashboard" | "chat"
@@ -79,12 +81,9 @@ export function Sidebar({ activeView, setActiveView }: SidebarProps) {
         </ScrollArea>
       </div>
 
-      {/* Footer */}
+      {/* Footer - User Profile */}
       <div className="p-4 border-t border-border">
-        <button className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm text-muted-foreground hover:bg-muted transition-colors">
-          <span className="w-2 h-2 bg-muted-foreground rounded-full"></span>
-          Settings
-        </button>
+        <UserProfile />
       </div>
     </aside>
   )
