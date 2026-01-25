@@ -1,4 +1,5 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from convoxai.core.models import APIResponse,ErrorResponse,ModelTestRequest
 from convoxai.core.summarizer import generate_summary
@@ -17,6 +18,20 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
+)
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",  # Vite default dev server
+        "http://localhost:3000",  # Alternative dev server
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Utility function to save uploaded file temporarily
