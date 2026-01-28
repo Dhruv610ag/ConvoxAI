@@ -6,7 +6,7 @@ from convoxai.core.summarizer import generate_summary
 from convoxai.core.models import SummaryResponse
 from convoxai.config import GEMINI_MODEL_NAME, WHISPER_MODEL_SIZE,GROQ_MODEL_NAME
 from convoxai.core.summarizer import create_llm,create_llm_2
-from convoxai.api import auth, storage, chat_history
+from convoxai.api import auth, storage, chat_history, chat_query
 from convoxai.utils.audio import transcribe_audio_simple
 import os
 import tempfile
@@ -26,14 +26,15 @@ app = FastAPI(
 app.include_router(auth.router)
 app.include_router(storage.router)
 app.include_router(chat_history.router)
+app.include_router(chat_query.router)
 
 
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173",  # Vite default dev server
-        "http://localhost:3000",  # Alternative dev server
+        "http://localhost:5173",  
+        "http://localhost:3000",  
         "http://127.0.0.1:5173",
         "http://127.0.0.1:3000",
     ],

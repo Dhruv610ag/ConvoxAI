@@ -1,0 +1,46 @@
+from fastapi import APIRouter, HTTPException, status, Depends
+from convoxai.core.models import ChatQueryRequest, ChatQueryResponse, SourceDocument
+from convoxai.core.chatbot import process_query
+from convoxai.api.auth import get_authenticated_user
+import logging
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/chat", tags=["Chatbot"])
+
+
+@router.post("/query", response_model=ChatQueryResponse)
+async def query_chatbot(
+    request: ChatQueryRequest,
+    user: dict = Depends(get_authenticated_user)
+):
+    try:
+        chat_history = None
+        if request.chat_history:
+            chat_history = [
+                {"role": msg.role, "content": msg.content}
+                for msg in request.chat_history
+            ]
+        result = process_query(
+            question=request.question,
+            chat_history=chat_history,
+            model_choice=request.model_choice or "gemini"
+        )
+        sources = [
+            SourceDocument(
+                content=src["content"],
+                metadata=src.get("metadata", {})
+            )
+            for src in result.get("sources", [])
+        ]
+        return ChatQueryResponse(
+            answer=result["answer"],
+            sources=sources,
+            model_used=result["model_used"]
+        )
+    except Exception as e:  
+        logger.error(f"Chatbot query error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to process chatbot query: {str(e)}"
+        )

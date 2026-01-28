@@ -94,3 +94,18 @@ class ConversationListResponse(BaseModel):
     updated_at: datetime
 
 
+# Chatbot Query Models
+class ChatQueryRequest(BaseModel):
+    question: str = Field(..., description="User's question about calls")
+    chat_history: Optional[List[ChatMessage]] = Field(default=None, description="Optional conversation history")
+    model_choice: Optional[Literal["gemini", "groq"]] = Field(default="gemini", description="LLM model to use")
+
+class SourceDocument(BaseModel):
+    content: str = Field(..., description="Content of the source document")
+    metadata: Optional[Dict[str, Any]] = Field(default={}, description="Metadata about the source")
+
+class ChatQueryResponse(BaseModel):
+    answer: str = Field(..., description="AI-generated answer to the question")
+    sources: List[SourceDocument] = Field(default=[], description="Source documents used for the answer")
+    model_used: str = Field(..., description="Model used to generate the response")
+
