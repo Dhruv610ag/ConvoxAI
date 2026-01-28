@@ -14,8 +14,7 @@ from config import (
     GROQ_TEMPERATURE
 )
 
-chatbot_prompt_template = PromptTemplate(
-    input_variables=["question", "chat_history", "context"],
+chatbot_prompt_template = PromptTemplate.from_template(
     template=CHATBOT_PROMPT
 )
 
