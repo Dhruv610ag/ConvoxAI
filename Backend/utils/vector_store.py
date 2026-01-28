@@ -1,7 +1,7 @@
 from pinecone import Pinecone, ServerlessSpec
 from langchain_pinecone import PineconeVectorStore
-from convoxai.utils.embeddings import load_embeddings
-from convoxai.config import (
+from utils.embeddings import load_embeddings
+from config import (
     PINECONE_API_KEY,
     PINECONE_INDEX_NAME,
     PINECONE_DIMENSION,

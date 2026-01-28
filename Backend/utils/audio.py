@@ -2,7 +2,7 @@ from faster_whisper import WhisperModel
 from pydub import AudioSegment
 import warnings
 import os
-from convoxai.config import WHISPER_MODEL_SIZE
+from config import WHISPER_MODEL_SIZE
 
 warnings.filterwarnings("ignore", category=UserWarning)
 

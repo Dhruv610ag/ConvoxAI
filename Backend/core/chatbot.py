@@ -2,10 +2,10 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
 from langchain_classic.chains import ConversationalRetrievalChain
 from langchain_core.prompts import PromptTemplate
-from convoxai.core.prompts.templates import CHATBOT_PROMPT
-from convoxai.utils.vector_store import get_retriever
+from core.prompts.templates import CHATBOT_PROMPT
+from utils.vector_store import get_retriever
 from typing import List, Dict, Optional
-from convoxai.config import (
+from config import (
     GEMINI_API_KEY, 
     GEMINI_MODEL_NAME, 
     GEMINI_TEMPERATURE,
@@ -14,7 +14,8 @@ from convoxai.config import (
     GROQ_TEMPERATURE
 )
 
-chatbot_prompt_template = PromptTemplate.from_template(
+chatbot_prompt_template = PromptTemplate(
+    input_variables=["question", "chat_history", "context"],
     template=CHATBOT_PROMPT
 )
 

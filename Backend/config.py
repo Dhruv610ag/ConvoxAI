@@ -49,3 +49,12 @@ JWT_SECRET = os.getenv("JWT_SECRET", "your-secret-key-change-in-production")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24
 
+# Audio File Configuration
+ALLOWED_AUDIO_EXTENSIONS = {".wav", ".mp3", ".m4a", ".flac", ".ogg"}
+ALLOWED_AUDIO_MIME_TYPES = {
+    "audio/wav", "audio/mpeg", "audio/mp4",
+    "audio/x-m4a", "audio/flac", "audio/ogg"
+}
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+AUDIO_BUCKET_NAME = "audio-files"
+

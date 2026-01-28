@@ -6,7 +6,7 @@ for authentication, storage, and database operations.
 """
 
 from supabase import create_client, Client
-from convoxai.config import SUPABASE_URL, SUPABASE_KEY, SUPABASE_SERVICE_KEY
+from config import SUPABASE_URL, SUPABASE_KEY, SUPABASE_SERVICE_KEY
 from typing import Optional, Dict, Any, List
 import logging
 

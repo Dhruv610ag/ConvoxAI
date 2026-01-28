@@ -1,17 +1,20 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from convoxai.core.models import APIResponse,ErrorResponse,ModelTestRequest
-from convoxai.core.summarizer import generate_summary
-from convoxai.core.models import SummaryResponse
-from convoxai.config import GEMINI_MODEL_NAME, WHISPER_MODEL_SIZE,GROQ_MODEL_NAME
-from convoxai.core.summarizer import create_llm,create_llm_2
-from convoxai.api import auth, storage, chat_history, chat_query
-from convoxai.utils.audio import transcribe_audio_simple
+from core.models import APIResponse, ErrorResponse, ModelTestRequest
+from core.summarizer import generate_summary, create_gemini_llm, create_groq_llm
+from core.models import SummaryResponse
+from config import GEMINI_MODEL_NAME, WHISPER_MODEL_SIZE, GROQ_MODEL_NAME
+from utils.validation import validate_audio_file
+from api import auth, storage, chat_history, chat_query
+from utils.audio import transcribe_audio_simple
 import os
 import tempfile
 import shutil
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -71,59 +74,43 @@ async def root():
 
 @app.post("/models", response_model=APIResponse, tags=["Model"])
 async def model_check(request: ModelTestRequest):
-    llm_google = create_llm()
-    llm_groq = create_llm_2()
+    """Test LLM model connectivity and functionality."""
+    models = {
+        1: ("Google Gemini", create_gemini_llm(), GEMINI_MODEL_NAME),
+        2: ("Groq", create_groq_llm(), GROQ_MODEL_NAME)
+    }
     
-    if request.user_choice == 1 and llm_google:
-        try:
-            response = llm_google.invoke(request.query)
-            return APIResponse(
-                status="Success",
-                message=f"Google Gemini model is working! Response: {response.content[:100]}...",
-                model_info={
-                    "llm_model": GEMINI_MODEL_NAME,
-                    "whisper_model": WHISPER_MODEL_SIZE,
-                    "rag_enabled": True
-                }
-            )
-        except Exception as e:
-            return APIResponse(
-                status="Failed",
-                message=f"Google Gemini model failed: {str(e)}",
-                model_info={
-                    "llm_model": GEMINI_MODEL_NAME,
-                    "whisper_model": WHISPER_MODEL_SIZE,
-                    "rag_enabled": True
-                }
-            )
-    elif request.user_choice == 2 and llm_groq:
-        try:
-            response = llm_groq.invoke(request.query)
-            return APIResponse(
-                status="Success",
-                message=f"Groq model is working! Response: {response.content[:100]}...",
-                model_info={
-                    "llm_model": GROQ_MODEL_NAME,
-                    "whisper_model": WHISPER_MODEL_SIZE,
-                    "rag_enabled": True
-                }
-            )
-        except Exception as e:
-            return APIResponse(
-                status="Failed",
-                message=f"Groq model failed: {str(e)}",
-                model_info={
-                    "llm_model": GROQ_MODEL_NAME,
-                    "whisper_model": WHISPER_MODEL_SIZE,
-                    "rag_enabled": True
-                }
-            )
-    else:
+    if request.user_choice not in models:
         return APIResponse(
             status="Failed",
-            message="Invalid model choice or model not initialized",
+            message="Invalid model choice. Must be 1 (Gemini) or 2 (Groq)",
             model_info={
-                "llm_model": [GROQ_MODEL_NAME, GEMINI_MODEL_NAME],
+                "available_models": [GEMINI_MODEL_NAME, GROQ_MODEL_NAME],
+                "whisper_model": WHISPER_MODEL_SIZE,
+                "rag_enabled": True
+            }
+        )
+    
+    model_name, llm, model_id = models[request.user_choice]
+    
+    try:
+        response = llm.invoke(request.query)
+        return APIResponse(
+            status="Success",
+            message=f"{model_name} is working! Response: {response.content[:100]}...",
+            model_info={
+                "llm_model": model_id,
+                "whisper_model": WHISPER_MODEL_SIZE,
+                "rag_enabled": True
+            }
+        )
+    except Exception as e:
+        logger.error(f"{model_name} test failed: {str(e)}")
+        return APIResponse(
+            status="Failed",
+            message=f"{model_name} failed: {str(e)}",
+            model_info={
+                "llm_model": model_id,
                 "whisper_model": WHISPER_MODEL_SIZE,
                 "rag_enabled": True
             }
@@ -133,23 +120,10 @@ async def model_check(request: ModelTestRequest):
 @app.post("/summarize", response_model=SummaryResponse, tags=["Summarization"])
 async def summarize_audio(
     audio_file: UploadFile = File(..., description="Audio file (.wav, .mp3, .m4a, .flac,.ogg)")):
-    if not audio_file:
-        raise HTTPException(
-            ErrorResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Audio file was not found in the uploaded button"
-            )
-        )
-    allowed_extensions = {".wav", ".mp3", ".m4a", ".flac",".ogg"}
-    file_extension = Path(audio_file.filename).suffix.lower()
     
-    if file_extension not in allowed_extensions:
-        raise HTTPException(
-            ErrorResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid file format. Supported formats: {', '.join(allowed_extensions)}"
-            )
-        )
+    # Validate file
+    await validate_audio_file(audio_file)
+    
     tmp_file_path = None
     try:
         tmp_file_path = save_upload_file_tmp(audio_file)
@@ -157,16 +131,14 @@ async def summarize_audio(
         return summary_response
     except ValueError as ve:
         raise HTTPException(
-            ErrorResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(ve)
-        ))
+        )
     except Exception as e:
         raise HTTPException(
-            ErrorResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to process audio file: {str(e)}"
-        ))
+        )
     finally:
         if tmp_file_path and tmp_file_path.exists():
             try:
@@ -174,25 +146,12 @@ async def summarize_audio(
             except Exception:
                 pass
 
-@app.post("/transcript",tags=['Transcript'])
+@app.post("/transcript", tags=['Transcript'])
 async def get_transcript(audio_file: UploadFile = File(...)):
-    if not audio_file:
-        raise HTTPException(
-            ErrorResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Audio file was not found in the uploaded button"
-            )
-        )
-    allowed_extensions = {".wav", ".mp3", ".m4a", ".flac",".ogg"}
-    file_extension = Path(audio_file.filename).suffix.lower()
     
-    if file_extension not in allowed_extensions:
-        raise HTTPException(
-            ErrorResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid file format. Supported formats: {', '.join(allowed_extensions)}"
-            )
-        )
+    # Validate file
+    await validate_audio_file(audio_file)
+    
     tmp_file_path = None
     try:
         tmp_file_path=save_upload_file_tmp(audio_file)
@@ -214,11 +173,13 @@ async def http_exception_handler(request, exc):
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request, exc):
+    logger.error(f"Unhandled exception: {str(exc)}", exc_info=True)
     return JSONResponse(
-        ErrorResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc)
-        )
+        status_code=500,
+        content={
+            "error": "Internal Server Error",
+            "detail": "An unexpected error occurred"
+        }
     )
 
 @app.on_event("startup")

@@ -5,11 +5,12 @@ This module provides endpoints for saving, retrieving, and managing chat convers
 """
 
 from fastapi import APIRouter, HTTPException, status, Depends
-from convoxai.core.models import (
+from core.models import (
     ChatConversation, SaveConversationRequest, ConversationListResponse, ChatMessage
 )
-from convoxai.utils.supabase_client import insert_record, get_records, delete_record, update_record
-from convoxai.api.auth import get_authenticated_user
+from utils.supabase_client import insert_record, get_records, delete_record, update_record
+from utils.db_helpers import get_user_conversation
+from api.auth import get_authenticated_user
 from typing import List
 import logging
 import uuid
@@ -145,18 +146,7 @@ async def get_conversation(
     """
     try:
         # Get conversation
-        conversations = await get_records(
-            table_name="chat_conversations",
-            filters={"id": conversation_id, "user_id": user.id}
-        )
-        
-        if not conversations:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Conversation not found"
-            )
-        
-        conversation = conversations[0]
+        conversation = await get_user_conversation(conversation_id, user.id)
         
         # Get messages
         messages_data = await get_records(
@@ -211,16 +201,7 @@ async def delete_conversation(
     """
     try:
         # Verify conversation belongs to user
-        conversations = await get_records(
-            table_name="chat_conversations",
-            filters={"id": conversation_id, "user_id": user.id}
-        )
-        
-        if not conversations:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Conversation not found"
-            )
+        conversation = await get_user_conversation(conversation_id, user.id)
         
         # Delete messages first (due to foreign key constraint)
         messages = await get_records(

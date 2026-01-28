@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends
-from convoxai.core.models import ChatQueryRequest, ChatQueryResponse, SourceDocument
-from convoxai.core.chatbot import process_query
-from convoxai.api.auth import get_authenticated_user
+from core.models import ChatQueryRequest, ChatQueryResponse, SourceDocument
+from core.chatbot import process_query
+from api.auth import get_authenticated_user
 import logging
 
 logger = logging.getLogger(__name__)

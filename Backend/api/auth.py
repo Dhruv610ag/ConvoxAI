@@ -1,11 +1,12 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from convoxai.core.models import (
+from core.models import (
     UserSignUp, UserSignIn, AuthResponse, UserResponse, TokenResponse
 )
-from convoxai.utils.supabase_client import (
+from utils.supabase_client import (
     sign_up_user, sign_in_user, sign_out_user, get_user_from_token
 )
+from utils.auth_helpers import create_user_response
 import logging
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -29,12 +30,7 @@ async def signup(user_data: UserSignUp):
             )
         user = result["user"]
         session = result["session"]
-        user_response = UserResponse(
-            id=user.id,
-            email=user.email,
-            full_name=user.user_metadata.get("full_name") if user.user_metadata else None,
-            created_at=user.created_at
-        )
+        user_response = create_user_response(user)
         token_response = TokenResponse(
             access_token=session.access_token,
             refresh_token=session.refresh_token,
@@ -67,12 +63,7 @@ async def signin(credentials: UserSignIn):
         
         user = result["user"]
         session = result["session"]
-        user_response = UserResponse(
-            id=user.id,
-            email=user.email,
-            full_name=user.user_metadata.get("full_name") if user.user_metadata else None,
-            created_at=user.created_at
-        )
+        user_response = create_user_response(user)
         
         token_response = TokenResponse(
             access_token=session.access_token,
@@ -116,12 +107,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
                 detail="Invalid or expired token"
             )
         
-        return UserResponse(
-            id=user.id,
-            email=user.email,
-            full_name=user.user_metadata.get("full_name") if user.user_metadata else None,
-            created_at=user.created_at
-        )
+        return create_user_response(user)
         
     except HTTPException:
         raise

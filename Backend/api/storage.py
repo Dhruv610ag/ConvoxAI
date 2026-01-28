@@ -6,12 +6,15 @@ This module provides endpoints for uploading, retrieving, and managing audio fil
 
 from fastapi import APIRouter, File, UploadFile, HTTPException, status, Depends
 from fastapi.security import HTTPAuthorizationCredentials
-from convoxai.core.models import AudioFileMetadata, AudioFileUploadResponse
-from convoxai.utils.supabase_client import (
+from core.models import AudioFileMetadata, AudioFileUploadResponse
+from utils.supabase_client import (
     upload_file_to_storage, delete_file_from_storage, 
     get_file_url, insert_record, get_records, delete_record
 )
-from convoxai.api.auth import get_authenticated_user, security
+from utils.validation import validate_audio_file
+from utils.db_helpers import get_user_file
+from config import ALLOWED_AUDIO_EXTENSIONS, AUDIO_BUCKET_NAME
+from api.auth import get_authenticated_user, security
 from pathlib import Path
 from typing import List
 import logging
@@ -21,9 +24,6 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/storage", tags=["Storage"])
-
-AUDIO_BUCKET = "audio-files"
-ALLOWED_EXTENSIONS = {".wav", ".mp3", ".m4a", ".flac", ".ogg"}
 
 
 @router.post("/upload", response_model=AudioFileUploadResponse)
@@ -42,13 +42,8 @@ async def upload_audio_file(
         File metadata and storage URL
     """
     try:
-        # Validate file extension
-        file_extension = Path(audio_file.filename).suffix.lower()
-        if file_extension not in ALLOWED_EXTENSIONS:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid file format. Supported formats: {', '.join(ALLOWED_EXTENSIONS)}"
-            )
+        # Validate file
+        await validate_audio_file(audio_file)
         
         # Read file data
         file_data = await audio_file.read()
@@ -60,7 +55,7 @@ async def upload_audio_file(
         
         # Upload to Supabase Storage
         storage_url = await upload_file_to_storage(
-            bucket_name=AUDIO_BUCKET,
+            bucket_name=AUDIO_BUCKET_NAME,
             file_path=filename,
             file_data=file_data,
             content_type=audio_file.content_type or "audio/mpeg",
@@ -142,21 +137,10 @@ async def get_file(
     """
     try:
         # Get file metadata
-        files = await get_records(
-            table_name="audio_files",
-            filters={"id": file_id, "user_id": user.id}
-        )
-        
-        if not files:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="File not found"
-            )
-        
-        file_metadata = files[0]
+        file_metadata = await get_user_file(file_id, user.id)
         
         # Get file URL
-        file_url = await get_file_url(AUDIO_BUCKET, file_metadata["storage_path"])
+        file_url = await get_file_url(AUDIO_BUCKET_NAME, file_metadata["storage_path"])
         
         return {
             "file_id": file_metadata["id"],
@@ -193,21 +177,10 @@ async def delete_file(
     """
     try:
         # Get file metadata
-        files = await get_records(
-            table_name="audio_files",
-            filters={"id": file_id, "user_id": user.id}
-        )
-        
-        if not files:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="File not found"
-            )
-        
-        file_metadata = files[0]
+        file_metadata = await get_user_file(file_id, user.id)
         
         # Delete from storage
-        await delete_file_from_storage(AUDIO_BUCKET, file_metadata["storage_path"])
+        await delete_file_from_storage(AUDIO_BUCKET_NAME, file_metadata["storage_path"])
         
         # Delete metadata from database
         await delete_record("audio_files", file_id)
